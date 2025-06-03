@@ -1,6 +1,7 @@
 package match
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -17,6 +18,14 @@ func RemoveSpaces(s string) string {
 // ReduceSpaces 将多个连续空白缩减为一个空格
 func ReduceSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
+}
+
+// WrapWith 如果本身不为空，在左右两边添加字符
+func WrapWith(s, left, right string) string {
+	if s == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s%s%s", left, s, right)
 }
 
 // ReplaceWith 一一对应进行替换，次序不定（因为map的关系）

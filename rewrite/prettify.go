@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	fs "github.com/azhai/allgo/fsutil"
+	"github.com/azhai/allgo/fsutil"
 	"golang.org/x/tools/imports"
 )
 
@@ -30,7 +30,7 @@ func FormatGolangCode(src []byte) ([]byte, error) {
 
 // SaveCodeToFile 将go代码保存到文件
 func SaveCodeToFile(filename string, codeText []byte) ([]byte, error) {
-	err := fs.WriteFile(filename, codeText, false)
+	err := fsutil.WriteFile(filename, codeText, false)
 	return codeText, err
 }
 
@@ -101,7 +101,7 @@ func WritePackage(pkgPath, pkgName string) error {
 	if pkgName != "" {
 		// TODO: 替换包名
 	}
-	files, err := fs.FindFiles(pkgPath, ".go")
+	files, err := fsutil.FindFiles(pkgPath, ".go")
 	if err != nil {
 		return err
 	}

@@ -84,6 +84,13 @@ func (f *FileHandler) GetDims() (int, int) {
 	return img.Width, img.Height
 }
 
+// FileSize 获取文件大小
+func FileSize(path string) (int64, error) {
+	fh := File(path)
+	defer fh.Close()
+	return fh.Size(), fh.Error()
+}
+
 func CreateFile(path string) (fp *os.File, err error) {
 	// create dirs if file not exists
 	if dir := filepath.Dir(path); dir != "." {

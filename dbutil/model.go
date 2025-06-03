@@ -248,3 +248,21 @@ func ScanToSecondary[K comparable, T ModelSecondaryLoader](dest map[K]map[string
 	}
 	return rs.Err()
 }
+
+// ScanToMap 扫描结果集到Map
+// dest必须是一个指向Map的指针
+func ScanToMap[T any](dest map[string]T, rs *sql.Rows) error {
+	defer rs.Close()
+	for rs.Next() {
+		var (
+			key   string
+			value T
+		)
+		err := rs.Scan(&key, &value)
+		if err != nil {
+			return err
+		}
+		dest[key] = value
+	}
+	return rs.Err()
+}

@@ -17,11 +17,24 @@ import (
 )
 
 type DBServ struct {
-	DSN string
+	DSN  string
+	Type string // 数据库类型
+	Name string // 当前数据库
 	*sql.DB
 }
 
-func (s *DBServ) WithLogger(filename, level string) {
+func New(dbType, dsn string) (*DBServ, error) {
+	var dbServ *DBServ
+	db, err := sql.Open(dbType, dsn)
+	if err == nil && db != nil {
+		dbServ = &DBServ{DB: db, DSN: dsn, Type: dbType}
+		ctx := context.Background()
+		err = dbServ.PingContext(ctx)
+	}
+	return dbServ, err
+}
+
+func (s *DBServ) WithLogger(level, filename string) {
 	logger := logutil.NewLoggerURL(level, filename)
 	loggerAdapter := zapadapter.New(logger.Desugar())
 	s.DB = sqldblogger.OpenDriver(s.DSN, s.DB.Driver(), loggerAdapter)
