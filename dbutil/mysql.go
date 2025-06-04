@@ -1,18 +1,16 @@
-package dialect
+package dbutil
 
 import (
 	"fmt"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 const MysqlPort uint16 = 3306
 
 // Mysql MySQL或MariaDB数据库
 type Mysql struct {
-	Host     string `hcl:"host" json:"host"`
-	Port     uint16 `hcl:"port,optional" json:"port,omitempty"`
-	Database string `hcl:"database,optional" json:"database,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -20,8 +18,8 @@ func (Mysql) IsRelationalDB() bool {
 	return true
 }
 
-// Name 驱动名
-func (Mysql) Name() string {
+// TypeName 驱动名
+func (Mysql) TypeName() string {
 	return "mysql"
 }
 
@@ -57,17 +55,20 @@ func (d Mysql) BuildFullDSN(username, password string) string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Mysql) GetCurrentDB(db *dbutil.DBServ) string {
+func (Mysql) GetCurrentDB(db *DBServ) string {
 	_ = db.QueryRow("SELECT DATABASE()").Scan(&db.Name)
 	return db.Name
 }
 
 // FindTableInfos 查找表信息
-func (d Mysql) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
+func (d Mysql) FindTableInfos(db *DBServ) []*TableSchema {
 	query := `SELECT table_name, table_comment
 FROM information_schema.tables WHERE table_schema = ?
-AND TABLE_TYPE = 'BASE TABLE' AND ENGINE IN ('MyISAM', 'InnoDB', 'TokuDB')`
-	tables := QueryTableInfos(db, query)
+AND table_type = 'BASE TABLE' ORDER BY table_name`
+	if db.Name == "" {
+		d.GetCurrentDB(db)
+	}
+	tables := QueryTableInfos(db, query, db.Name)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -76,7 +77,7 @@ AND TABLE_TYPE = 'BASE TABLE' AND ENGINE IN ('MyISAM', 'InnoDB', 'TokuDB')`
 }
 
 // FetchColumnInfos 查找字段信息
-func (d Mysql) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
+func (d Mysql) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	query := `SELECT column_name, column_default, is_nullable = 'YES' as is_nullable,
 data_type, column_type, character_maximum_length, column_comment, column_key, extra
 FROM information_schema.columns WHERE table_name = ? AND table_schema = ?

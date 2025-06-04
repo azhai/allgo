@@ -30,3 +30,25 @@ func (w Word) MatchSubString(subs string) (string, Word) {
 	}
 	return string(w[:i]), w[i+len(subs):]
 }
+
+// MatchFirstID 在头部寻找标识符，例如URL中的Schema
+func (w Word) MatchFirstID() string {
+	var i, offset int
+	matched := false
+	for i = 0; i < len(w); i++ {
+		c := w[i]
+		if c == '_' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' {
+			matched = true
+			continue
+		}
+		if matched && '0' <= c && c <= '9' {
+			matched = true
+			continue
+		}
+		if !matched && (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
+			offset++
+		}
+		break
+	}
+	return string(w[offset:i])
+}

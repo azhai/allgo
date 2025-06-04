@@ -1,16 +1,15 @@
-package dialect
+package dbutil
 
 import (
+	"database/sql"
 	"regexp"
 	"strings"
 	"unicode"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 // Sqlite SQLite3数据库
 type Sqlite struct {
-	Path string `hcl:"path,optional" json:"path"`
+	Path string `json:"path"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -18,8 +17,8 @@ func (Sqlite) IsRelationalDB() bool {
 	return true
 }
 
-// Name 驱动名
-func (Sqlite) Name() string {
+// TypeName 驱动名
+func (Sqlite) TypeName() string {
 	return "sqlite3"
 }
 
@@ -57,13 +56,14 @@ func (d Sqlite) IsMemory() bool {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Sqlite) GetCurrentDB(db *dbutil.DBServ) string {
+func (Sqlite) GetCurrentDB(db *DBServ) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (d Sqlite) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
-	query := `SELECT tbl_name, name FROM sqlite_master WHERE type='table'`
+func (d Sqlite) FindTableInfos(db *DBServ) []*TableSchema {
+	query := `SELECT tbl_name, name FROM sqlite_master WHERE type = 'table'
+AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
 	tables := QueryTableInfos(db, query, db.Name)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
@@ -73,8 +73,8 @@ func (d Sqlite) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
 }
 
 // FetchColumnInfos 查找字段信息
-func (Sqlite) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
-	query := `SELECT sql FROM sqlite_master WHERE type='table' AND tbl_name = ?`
+func (Sqlite) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
+	query := `SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?`
 	var createSQL string
 	err := db.QueryRow(query, table).Scan(&createSQL)
 	if err != nil || createSQL == "" {
@@ -118,7 +118,6 @@ func (Sqlite) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
 func parseString(colStr string, pks map[string]bool) (*ColumnInfo, error) {
 	fields := splitColStr(colStr)
 	col := &ColumnInfo{Nullable: true}
-	pk, auto_incr := "pk", "auto_incr"
 	for idx, field := range fields {
 		if idx == 0 {
 			col.Name = strings.Trim(strings.TrimSpace(field), "`[]'\"")
@@ -128,13 +127,13 @@ func parseString(colStr string, pks map[string]bool) (*ColumnInfo, error) {
 			continue
 		}
 		if _, ok := pks[col.Name]; ok {
-			col.Index = &pk
+			col.Index = sql.Null[string]{Valid: true, V: "pk"}
 		}
 		switch field {
 		case "PRIMARY":
-			col.Index = &pk
+			col.Index = sql.Null[string]{Valid: true, V: "pk"}
 		case "AUTOINCREMENT":
-			col.Extra = &auto_incr
+			col.Extra = sql.Null[string]{Valid: true, V: "auto_incr"}
 		case "NULL":
 			if fields[idx-1] == "NOT" {
 				col.Nullable = false
@@ -142,7 +141,7 @@ func parseString(colStr string, pks map[string]bool) (*ColumnInfo, error) {
 				col.Nullable = true
 			}
 		case "DEFAULT":
-			col.Default = &fields[idx+1]
+			col.Default = sql.Null[string]{Valid: true, V: fields[idx+1]}
 		}
 	}
 	return col, nil

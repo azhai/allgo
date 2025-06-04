@@ -11,7 +11,7 @@ var logger *zap.SugaredLogger
 // OpenService 根据配置初始化日志单例
 func OpenService(env *config.Environ) error {
 	if logFile := env.Get("ACCESS_LOG_FILE"); logFile != "" {
-		logger = logutil.NewLoggerURL("info", logFile)
+		logger = logutil.NewLoggerURL(logFile)
 	} else if logDir := env.Get("LOG_DIR"); logDir != "" {
 		logger = logutil.NewLogger(logDir)
 	} else {

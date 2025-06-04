@@ -1,19 +1,17 @@
-package dialect
+package dbutil
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 const RedisPort uint16 = 6379
 
 // Redis Redis缓存
 type Redis struct {
-	Host     string `hcl:"host" json:"host"`
-	Port     uint16 `hcl:"port,optional" json:"port,omitempty"`
-	Database int    `hcl:"database,optional" json:"database,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database int    `json:"database,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -21,8 +19,8 @@ func (Redis) IsRelationalDB() bool {
 	return false
 }
 
-// Name 驱动名
-func (Redis) Name() string {
+// TypeName 驱动名
+func (Redis) TypeName() string {
 	return "redis"
 }
 
@@ -57,16 +55,16 @@ func (d Redis) BuildFullDSN(username, password string) string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Redis) GetCurrentDB(db *dbutil.DBServ) string {
+func (Redis) GetCurrentDB(db *DBServ) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (Redis) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
+func (Redis) FindTableInfos(db *DBServ) []*TableSchema {
 	return nil
 }
 
 // FetchColumnInfos 查找字段信息
-func (Redis) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
+func (Redis) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	return nil
 }

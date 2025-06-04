@@ -1,9 +1,8 @@
-package dialect
+package dbutil
 
 import (
+	"database/sql"
 	"fmt"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 type TableSchema struct {
@@ -12,23 +11,23 @@ type TableSchema struct {
 }
 
 type TableInfo struct {
-	Name    string  // 表名
-	Comment *string // 表描述
+	Name    string           // 表名
+	Comment sql.Null[string] // 表描述
 }
 
 type ColumnInfo struct {
-	Name     string  // 字段名
-	Default  *string // 默认值
-	Nullable bool    // 是否允许为空
-	DataType string  // 字段类型
-	ColType  string  // 字段类型
-	Length   *int    // 字段长度
-	Comment  *string // 字段描述
-	Index    *string // 索引类型
-	Extra    *string // 自动递增等选项
+	Name     string           // 字段名
+	Default  sql.Null[string] // 默认值
+	Nullable bool             // 是否允许为空
+	DataType string           // 字段类型
+	ColType  string           // 字段类型
+	Length   sql.Null[int]    // 字段长度
+	Comment  sql.Null[string] // 字段描述
+	Index    sql.Null[string] // 索引类型
+	Extra    sql.Null[string] // 自动递增等选项
 }
 
-func QueryTableInfos(db *dbutil.DBServ, query string, args ...any) (tables []*TableSchema) {
+func QueryTableInfos(db *DBServ, query string, args ...any) (tables []*TableSchema) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return
@@ -45,7 +44,7 @@ func QueryTableInfos(db *dbutil.DBServ, query string, args ...any) (tables []*Ta
 	return
 }
 
-func QueryTableColumns(db *dbutil.DBServ, query string, args ...any) (cols []*ColumnInfo) {
+func QueryTableColumns(db *DBServ, query string, args ...any) (cols []*ColumnInfo) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		fmt.Println("QUERY ERROR:", query, args)

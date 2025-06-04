@@ -1,20 +1,18 @@
-package dialect
+package dbutil
 
 import (
 	"fmt"
 	"strings"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 const PgsqlPort uint16 = 5432
 
 // Postgres PostgreSQL数据库
 type Postgres struct {
-	Host     string `hcl:"host" json:"host"`
-	Port     uint16 `hcl:"port,optional" json:"port,omitempty"`
-	Database string `hcl:"database,optional" json:"database,omitempty"`
-	Sslmode  string `hcl:"sslmode,optional" json:"sslmode,omitempty"` // 例如 disable
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
+	Sslmode  string `json:"sslmode,omitempty"` // 例如 disable
 }
 
 // IsRelationalDB 是否关系数据库
@@ -22,8 +20,8 @@ func (Postgres) IsRelationalDB() bool {
 	return true
 }
 
-// Name 驱动名
-func (Postgres) Name() string {
+// TypeName 驱动名
+func (Postgres) TypeName() string {
 	return "postgres"
 }
 
@@ -61,13 +59,13 @@ func (d Postgres) BuildFullDSN(username, password string) string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Postgres) GetCurrentDB(db *dbutil.DBServ) string {
+func (Postgres) GetCurrentDB(db *DBServ) string {
 	_ = db.QueryRow("SELECT CURRENT_DATABASE()").Scan(&db.Name)
 	return db.Name
 }
 
 // FindTableInfos 查找表信息
-func (d Postgres) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
+func (d Postgres) FindTableInfos(db *DBServ) []*TableSchema {
 	query := `SELECT c.relname as table_name, d.description as table_comment
 FROM pg_catalog.pg_class c 
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -82,7 +80,7 @@ WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Postgres) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
+func (Postgres) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	query := `SELECT s.column_name, s.column_default, s.is_nullable = 'YES' as is_nullable,
 s.data_type, s.udt_name as column_type, s.character_maximum_length,
 d.description as column_comment, p.contype as column_key, p.conname as extra

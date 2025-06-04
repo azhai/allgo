@@ -1,11 +1,10 @@
-package dialect
+package dbutil
 
 import (
 	"fmt"
 	"net/url"
 	"strings"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
@@ -18,15 +17,15 @@ var (
 
 // Dialect 不同数据库的驱动配置
 type Dialect interface {
-	IsRelationalDB() bool                                           // 是否关系数据库
-	Name() string                                                   // 驱动名
-	ImporterPath() string                                           // 驱动支持库
-	QuoteIdent(ident string) string                                 // 字段或表名脱敏
-	BuildDSN() string                                               // 生成DSN连接串
-	BuildFullDSN(username, password string) string                  // 生成带账号的完整DSN
-	GetCurrentDB(db *dbutil.DBServ) string                          // 获得当前数据库名
-	FindTableInfos(db *dbutil.DBServ) []*TableSchema                // 查找表信息
-	FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo // 查找字段信息
+	IsRelationalDB() bool                                    // 是否关系数据库
+	TypeName() string                                        // 驱动名
+	ImporterPath() string                                    // 驱动支持库
+	QuoteIdent(ident string) string                          // 字段或表名脱敏
+	BuildDSN() string                                        // 生成DSN连接串
+	BuildFullDSN(username, password string) string           // 生成带账号的完整DSN
+	GetCurrentDB(db *DBServ) string                          // 获得当前数据库名
+	FindTableInfos(db *DBServ) []*TableSchema                // 查找表信息
+	FetchColumnInfos(db *DBServ, table string) []*ColumnInfo // 查找字段信息
 }
 
 // ConnConfig 连接配置
@@ -42,8 +41,11 @@ type ConnConfig struct {
 
 // LoadDialect 加载数据库驱动配置
 func (c *ConnConfig) LoadDialect() Dialect {
-	if c.Type == "" || c.Dialect != nil {
+	if c.Dialect != nil {
 		return c.Dialect
+	}
+	if c.Type == "" && c.DSN != "" {
+		c.Type = ParseSchema(c.DSN)
 	}
 	c.Dialect = CreateDialectByName(c.Type)
 	return c.Dialect
@@ -52,7 +54,7 @@ func (c *ConnConfig) LoadDialect() Dialect {
 // Name 数据库驱动名
 func (c *ConnConfig) Name() string {
 	if d := c.LoadDialect(); d != nil {
-		return d.Name()
+		return d.TypeName()
 	}
 	return c.Type
 }
@@ -60,12 +62,12 @@ func (c *ConnConfig) Name() string {
 // GetDSN 获取DSN连接串，可选是否带账号密码
 func (c *ConnConfig) GetDSN(full bool) string {
 	var dsn string
-	if d := c.LoadDialect(); d != nil {
+	if dia := c.LoadDialect(); dia != nil {
 		if c.DSN == "" {
-			c.DSN = d.BuildDSN()
+			c.DSN = dia.BuildDSN()
 		}
 		if full {
-			dsn = d.BuildFullDSN(c.Username, c.Password)
+			dsn = dia.BuildFullDSN(c.Username, c.Password)
 		}
 	}
 	if dsn == "" {
@@ -94,6 +96,12 @@ func CreateDialectByName(name string) Dialect {
 	case "sqlite", "sqlite3":
 		return &Sqlite{}
 	}
+}
+
+// ParseSchema 解析数据库连接串，获得数据库类型
+func ParseSchema(dsn string) string {
+	sch := match.Word(dsn).MatchFirstID()
+	return strings.ToLower(sch)
 }
 
 // GetAddr 获得数据库的连接地址和端口，用于TCP协议的数据库连接

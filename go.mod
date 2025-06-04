@@ -5,9 +5,11 @@ go 1.24
 require (
 	github.com/alexflint/go-arg v1.5.1
 	github.com/go-playground/form/v4 v4.2.1
+	github.com/go-sql-driver/mysql v1.9.2
 	github.com/gobwas/glob v0.2.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/lib/pq v1.10.9
+	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/muyo/sno v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/simukti/sqldb-logger v0.0.0-20230108155151-646c1a075551
@@ -18,6 +20,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

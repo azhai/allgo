@@ -1,18 +1,16 @@
-package dialect
+package dbutil
 
 import (
 	"net/url"
 	"strconv"
-
-	"github.com/azhai/allgo/dbutil"
 )
 
 const FlashDBPort uint16 = 8000
 
 // FlashDB 一个golang写的类似redis的缓存
 type FlashDB struct {
-	Path             string `hcl:"path,optional" json:"path,omitempty"`
-	EvictionInterval int    `hcl:"eviction_interval,optional" json:"eviction_interval,omitempty"`
+	Path             string `json:"path,omitempty"`
+	EvictionInterval int    `json:"eviction_interval,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -20,8 +18,8 @@ func (FlashDB) IsRelationalDB() bool {
 	return false
 }
 
-// Name 驱动名
-func (FlashDB) Name() string {
+// TypeName 驱动名
+func (FlashDB) TypeName() string {
 	return "flashdb"
 }
 
@@ -46,7 +44,7 @@ func (d FlashDB) BuildDSN() string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (FlashDB) GetCurrentDB(db *dbutil.DBServ) string {
+func (FlashDB) GetCurrentDB(db *DBServ) string {
 	return ""
 }
 
@@ -56,11 +54,11 @@ func (d FlashDB) BuildFullDSN(username, password string) string {
 }
 
 // FindTableInfos 查找表信息
-func (FlashDB) FindTableInfos(db *dbutil.DBServ) []*TableSchema {
+func (FlashDB) FindTableInfos(db *DBServ) []*TableSchema {
 	return nil
 }
 
 // FetchColumnInfos 查找字段信息
-func (FlashDB) FetchColumnInfos(db *dbutil.DBServ, table string) []*ColumnInfo {
+func (FlashDB) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	return nil
 }

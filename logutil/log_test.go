@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	sinkURL = "rotate://../logs/access.log?min=1&comp=0"
-	logger  = logutil.NewLoggerURL("info", sinkURL)
+	sinkURL = "rotate://../logs/access.log?level=info&min=1&comp=0"
+	logger  = logutil.NewLoggerURL(sinkURL)
 )
 
 func NowTime() string {

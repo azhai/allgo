@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/azhai/allgo/logutil"
-	_ "github.com/lib/pq"
 	"github.com/simukti/sqldb-logger"
 	"github.com/simukti/sqldb-logger/logadapter/zapadapter"
 )
@@ -23,19 +22,8 @@ type DBServ struct {
 	*sql.DB
 }
 
-func New(dbType, dsn string) (*DBServ, error) {
-	var dbServ *DBServ
-	db, err := sql.Open(dbType, dsn)
-	if err == nil && db != nil {
-		dbServ = &DBServ{DB: db, DSN: dsn, Type: dbType}
-		ctx := context.Background()
-		err = dbServ.PingContext(ctx)
-	}
-	return dbServ, err
-}
-
-func (s *DBServ) WithLogger(level, filename string) {
-	logger := logutil.NewLoggerURL(level, filename)
+func (s *DBServ) WithLogger(filename string) {
+	logger := logutil.NewLoggerURL(filename)
 	loggerAdapter := zapadapter.New(logger.Desugar())
 	s.DB = sqldblogger.OpenDriver(s.DSN, s.DB.Driver(), loggerAdapter)
 }

@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/azhai/allgo/config"
@@ -27,18 +28,26 @@ func DB() *dbutil.DBServ {
 
 // OpenService 初始化服务
 func OpenService(env *config.Environ) error {
-	dbType := env.GetStr("DATABASE_TYPE", "postgres")
 	dsn := env.Get("DATABASE_URL")
-	// fmt.Println(dbType, dsn)
-	var err error
-	dbServ, err = dbutil.New(dbType, dsn)
-	if err == nil && dbServ != nil {
-		logLevel := env.GetStr("LOG_LEVEL", "info")
-		logFile := env.Get("DATABASE_LOG_FILE")
-		// fmt.Println(logLevel, logFile)
-		dbServ.WithLogger(logLevel, logFile)
+	dbType := env.GetStr("DATABASE_TYPE")
+	if dbType == "" {
+		dbType = dbutil.ParseSchema(dsn)
 	}
-	return err
+
+	db, err := sql.Open(dbType, dsn)
+	if err != nil || db == nil {
+		return err
+	}
+	ctx := context.Background()
+	if err = db.PingContext(ctx); err != nil {
+		return err
+	}
+
+	dbServ = &dbutil.DBServ{DB: db, DSN: dsn, Type: dbType}
+	if logFile := env.Get("DATABASE_LOG"); logFile != "" {
+		dbServ.WithLogger(logFile)
+	}
+	return nil
 }
 
 // CloseService 关闭服务

@@ -32,11 +32,16 @@ func NewLogger(dir string) *zap.SugaredLogger {
 }
 
 // NewLoggerURL 单路径日志，指定日志级别和路径
-func NewLoggerURL(level, url string) *zap.SugaredLogger {
-	if strings.Contains(url, "{{FILE}}") {
-		return NewLoggerCustom(SingleFileConfig(level, ""), url)
+func NewLoggerURL(file string) *zap.SugaredLogger {
+	var level string
+	u, err := url.Parse(file)
+	if err == nil && u != nil {
+		level = u.Query().Get("level")
 	}
-	return NewLoggerCustom(SingleFileConfig(level, url), "")
+	if strings.Contains(file, "{{FILE}}") {
+		return NewLoggerCustom(SingleFileConfig(level, ""), file)
+	}
+	return NewLoggerCustom(SingleFileConfig(level, file), "")
 }
 
 // NewLoggerCustom 根据配置产生记录器
@@ -69,7 +74,9 @@ func DefaultConfig() *LogConfig {
 // SingleFileConfig 使用单个文件的记录器
 func SingleFileConfig(level, file string) *LogConfig {
 	cfg := DefaultConfig()
-	cfg.MinLevel = level
+	if level != "" {
+		cfg.MinLevel = level
+	}
 	cfg.Outputs = []Output{
 		{Start: level, Stop: "fatal", OutPaths: []string{file}},
 	}
@@ -186,7 +193,9 @@ func GetAbsPath(file string, onlyFile bool) (path string, err error) {
 	if u.Scheme != "" {
 		file = file[len(u.Scheme+"://"):]
 	}
-	u, err = url.Parse(file)
+	if u, err = url.Parse(file); u == nil {
+		return
+	}
 	path, _ = filepath.Abs(u.Path)
 	path = ignoreWinDisk(path)
 	if scheme != "file" { // 重新拼接
