@@ -249,6 +249,36 @@ func ScanToSecondary[K comparable, T ModelSecondaryLoader](dest map[K]map[string
 	return rs.Err()
 }
 
+// ScanToStructs 扫描结果集到Struct
+func ScanToStructs[T any](dest *[]T, rs *sql.Rows) error {
+	defer rs.Close()
+	dt := reflect.TypeOf(dest).Elem().Elem()
+	if dt.Kind() != reflect.Ptr {
+		return NotPtrList
+	}
+
+	var err error
+	for rs.Next() {
+		elem := reflect.New(dt.Elem()).Interface().(T)
+		vt := reflect.ValueOf(elem)
+		if vt.Kind() != reflect.Struct {
+			err = rs.Scan(&elem)
+		} else {
+			num := vt.NumField()
+			columns := make([]any, num)
+			for i := 0; i < num; i++ {
+				columns[i] = vt.Field(i).Addr().Interface()
+			}
+			err = rs.Scan(columns...)
+		}
+		if err != nil {
+			return err
+		}
+		*dest = append(*dest, elem)
+	}
+	return rs.Err()
+}
+
 // ScanToMap 扫描结果集到Map
 // dest必须是一个指向Map的指针
 func ScanToMap[T any](dest map[string]T, rs *sql.Rows) error {

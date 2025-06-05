@@ -1,17 +1,27 @@
-package dbutil
+package dialect
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
+
+	"github.com/azhai/allgo/dbutil"
+	"github.com/azhai/allgo/match"
 )
 
 const RedisPort uint16 = 6379
 
+func init() {
+	dbutil.RegisterDialect(&Redis{}, "dragonfly", "garnet", "keydb", "valkey")
+}
+
 // Redis Redis缓存
+// Redis URI https://www.iana.org/assignments/uri-schemes/prov/redis
 type Redis struct {
-	Host     string `json:"host"`
-	Port     uint16 `json:"port,omitempty"`
-	Database int    `json:"database,omitempty"`
+	Host     string     `json:"host"`
+	Port     uint16     `json:"port,omitempty"`
+	Database int        `json:"database,omitempty"`
+	Options  url.Values `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -31,40 +41,49 @@ func (Redis) ImporterPath() string {
 
 // QuoteIdent 字段或表名脱敏
 func (Redis) QuoteIdent(ident string) string {
-	return WrapWith(ident, "'", "'")
+	return match.WrapWith(ident, "'", "'")
+}
+
+// GetParamString 获得连接参数
+func (d Redis) GetParamString() string {
+	opts := ""
+	if d.Options == nil {
+		return opts
+	}
+	return d.Options.Encode()
 }
 
 // BuildDSN 生成DSN连接串
 func (d Redis) BuildDSN() string {
-	addr := DefaultHost
+	addr := dbutil.DefaultHost
 	if d.Host != "" {
-		addr = GetAddr(d.Host, d.Port)
+		addr = dbutil.GetAddr(d.Host, d.Port)
 	}
 	dsn := fmt.Sprintf("redis://%s/%d?", addr, d.Database)
-	return dsn
+	return dsn + d.GetParamString()
 }
 
 // BuildFullDSN 生成带账号的完整DSN
 func (d Redis) BuildFullDSN(username, password string) string {
 	dsn, head := d.BuildDSN(), "redis://"
 	if strings.HasPrefix(dsn, head) {
-		account := GetAccount(username, password)
+		account := dbutil.GetAccount(username, password)
 		dsn = head + account + "@" + dsn[len(head):]
 	}
 	return dsn
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Redis) GetCurrentDB(db *DBServ) string {
+func (Redis) GetCurrentDB(db *dbutil.DBServ) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (Redis) FindTableInfos(db *DBServ) []*TableSchema {
+func (Redis) FindTableInfos(db *dbutil.DBServ) []*dbutil.TableSchema {
 	return nil
 }
 
 // FetchColumnInfos 查找字段信息
-func (Redis) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
+func (Redis) FetchColumnInfos(db *dbutil.DBServ, table string) []*dbutil.ColumnInfo {
 	return nil
 }

@@ -16,9 +16,10 @@ import (
 )
 
 type DBServ struct {
-	DSN  string
-	Type string // 数据库类型
-	Name string // 当前数据库
+	DSN     string
+	Name    string // 当前数据库
+	Type    string // 数据库类型
+	Dialect Dialect
 	*sql.DB
 }
 
@@ -26,6 +27,81 @@ func (s *DBServ) WithLogger(filename string) {
 	logger := logutil.NewLoggerURL(filename)
 	loggerAdapter := zapadapter.New(logger.Desugar())
 	s.DB = sqldblogger.OpenDriver(s.DSN, s.DB.Driver(), loggerAdapter)
+}
+
+func (s *DBServ) LoadDialect() Dialect {
+	if s.Dialect != nil {
+		return s.Dialect
+	}
+	if s.Type == "" && s.DSN != "" {
+		s.Type = ParseSchema(s.DSN)
+	}
+	if dia, ok := dialects[s.Type]; ok {
+		s.Dialect = dia
+		s.Type = dia.TypeName()
+		return s.Dialect
+	}
+	panic(fmt.Errorf("unsupported database type: %s", s.Type))
+}
+
+func (s *DBServ) IsPostgres() bool {
+	return s.Type == "pgsql" || s.Type == "postgres" || s.Type == "postgresql"
+}
+
+func (s *DBServ) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.ExecContext(ctx, query, args...)
+}
+
+func (s *DBServ) Exec(query string, args ...any) (sql.Result, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.Exec(query, args...)
+}
+
+func (s *DBServ) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.PrepareContext(ctx, query)
+}
+
+func (s *DBServ) Prepare(query string) (*sql.Stmt, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.Prepare(query)
+}
+
+func (s *DBServ) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.QueryContext(ctx, query, args...)
+}
+
+func (s *DBServ) Query(query string, args ...any) (*sql.Rows, error) {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.Query(query, args...)
+}
+
+func (s *DBServ) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.QueryRowContext(ctx, query, args...)
+}
+
+func (s *DBServ) QueryRow(query string, args ...any) *sql.Row {
+	if !s.IsPostgres() {
+		query = QuestionMarkHolders(query)
+	}
+	return s.DB.QueryRow(query, args...)
 }
 
 func (s *DBServ) FlattenExec(ctx context.Context,

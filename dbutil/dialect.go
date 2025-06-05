@@ -2,8 +2,8 @@ package dbutil
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/azhai/allgo/match"
 )
@@ -11,14 +11,14 @@ import (
 const DefaultHost = "127.0.0.1"
 
 var (
-	WrapWith = match.WrapWith
-	Escape   = url.QueryEscape
+	dialects = make(map[string]Dialect)
+	diaMutex = new(sync.RWMutex)
 )
 
-// Dialect 不同数据库的驱动配置
+// Dialect 数据库类型
 type Dialect interface {
 	IsRelationalDB() bool                                    // 是否关系数据库
-	TypeName() string                                        // 驱动名
+	TypeName() string                                        // 类型名
 	ImporterPath() string                                    // 驱动支持库
 	QuoteIdent(ident string) string                          // 字段或表名脱敏
 	BuildDSN() string                                        // 生成DSN连接串
@@ -28,73 +28,13 @@ type Dialect interface {
 	FetchColumnInfos(db *DBServ, table string) []*ColumnInfo // 查找字段信息
 }
 
-// ConnConfig 连接配置
-type ConnConfig struct {
-	DSN      string     `hcl:"dsn,optional" json:"dsn,omitempty"`
-	Type     string     `hcl:"type,label" json:"type"` // 数据库类型
-	Key      string     `hcl:"key,label" json:"key"`   // 数据库连接名
-	Username string     `hcl:"username,optional" json:"username,omitempty"`
-	Password string     `hcl:"password,optional" json:"password,omitempty"`
-	Options  url.Values `hcl:"options,optional" json:"options,omitempty"`
-	Dialect  Dialect
-}
-
-// LoadDialect 加载数据库驱动配置
-func (c *ConnConfig) LoadDialect() Dialect {
-	if c.Dialect != nil {
-		return c.Dialect
-	}
-	if c.Type == "" && c.DSN != "" {
-		c.Type = ParseSchema(c.DSN)
-	}
-	c.Dialect = CreateDialectByName(c.Type)
-	return c.Dialect
-}
-
-// Name 数据库驱动名
-func (c *ConnConfig) Name() string {
-	if d := c.LoadDialect(); d != nil {
-		return d.TypeName()
-	}
-	return c.Type
-}
-
-// GetDSN 获取DSN连接串，可选是否带账号密码
-func (c *ConnConfig) GetDSN(full bool) string {
-	var dsn string
-	if dia := c.LoadDialect(); dia != nil {
-		if c.DSN == "" {
-			c.DSN = dia.BuildDSN()
-		}
-		if full {
-			dsn = dia.BuildFullDSN(c.Username, c.Password)
-		}
-	}
-	if dsn == "" {
-		dsn = c.DSN
-	}
-	if args := c.Options.Encode(); args != "" {
-		dsn += args
-	}
-	return strings.TrimRight(dsn, " ?&")
-}
-
-// CreateDialectByName 根据名称创建驱动配置
-func CreateDialectByName(name string) Dialect {
-	name = strings.ToLower(name)
-	switch name {
-	default:
-		return nil
-	case "flashdb":
-		return &FlashDB{}
-	case "mariadb", "mysql":
-		return &Mysql{}
-	case "pgsql", "postgres":
-		return &Postgres{}
-	case "redis":
-		return &Redis{}
-	case "sqlite", "sqlite3":
-		return &Sqlite{}
+// RegisterDialect 注册数据库类型
+func RegisterDialect(dialect Dialect, names ...string) {
+	diaMutex.Lock()
+	defer diaMutex.Unlock()
+	dialects[dialect.TypeName()] = dialect
+	for _, name := range names {
+		dialects[name] = dialect
 	}
 }
 

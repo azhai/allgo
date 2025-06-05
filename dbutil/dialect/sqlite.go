@@ -1,15 +1,24 @@
-package dbutil
+package dialect
 
 import (
 	"database/sql"
+	"net/url"
 	"regexp"
 	"strings"
 	"unicode"
+
+	"github.com/azhai/allgo/dbutil"
+	"github.com/azhai/allgo/match"
 )
+
+func init() {
+	dbutil.RegisterDialect(&Sqlite{}, "sqlite", "limbo")
+}
 
 // Sqlite SQLite3数据库
 type Sqlite struct {
-	Path string `json:"path"`
+	Path    string     `json:"path"`
+	Options url.Values `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -29,7 +38,19 @@ func (Sqlite) ImporterPath() string {
 
 // QuoteIdent 字段或表名脱敏
 func (Sqlite) QuoteIdent(ident string) string {
-	return WrapWith(ident, "`", "`")
+	return match.WrapWith(ident, "`", "`")
+}
+
+// GetParamString 获得连接参数
+func (d Sqlite) GetParamString() string {
+	opts := "cache=shared"
+	if d.Options == nil {
+		return opts
+	}
+	if !d.Options.Has("cache") {
+		d.Options.Set("cache", "shared")
+	}
+	return d.Options.Encode()
 }
 
 // BuildDSN 生成DSN连接串
@@ -37,7 +58,7 @@ func (d Sqlite) BuildDSN() string {
 	if d.IsMemory() {
 		d.Path = ":memory:"
 	}
-	return "file:" + d.Path + "?cache=shared&"
+	return "file:" + d.Path + "?" + d.GetParamString()
 }
 
 // BuildFullDSN 生成带账号的完整DSN
@@ -45,7 +66,8 @@ func (d Sqlite) BuildFullDSN(username, password string) string {
 	dsn := d.BuildDSN()
 	if !d.IsMemory() && username != "" {
 		dsn += "_auth_user=" + username + "&"
-		dsn += "_auth_pass=" + Escape(password) + "&"
+		password = url.QueryEscape(password)
+		dsn += "_auth_pass=" + password + "&"
 	}
 	return dsn
 }
@@ -56,15 +78,15 @@ func (d Sqlite) IsMemory() bool {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Sqlite) GetCurrentDB(db *DBServ) string {
+func (Sqlite) GetCurrentDB(db *dbutil.DBServ) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (d Sqlite) FindTableInfos(db *DBServ) []*TableSchema {
+func (d Sqlite) FindTableInfos(db *dbutil.DBServ) []*dbutil.TableSchema {
 	query := `SELECT tbl_name, name FROM sqlite_master WHERE type = 'table'
 AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
-	tables := QueryTableInfos(db, query, db.Name)
+	tables := dbutil.QueryTableInfos(db, query, db.Name)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -73,7 +95,7 @@ AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Sqlite) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
+func (Sqlite) FetchColumnInfos(db *dbutil.DBServ, table string) []*dbutil.ColumnInfo {
 	query := `SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?`
 	var createSQL string
 	err := db.QueryRow(query, table).Scan(&createSQL)
@@ -87,7 +109,7 @@ func (Sqlite) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	reg := regexp.MustCompile(`[^\(,\)]*(\([^\(]*\))?`)
 	colCreates := reg.FindAllString(createSQL[nStart+1:nEnd], -1)
 
-	var cols []*ColumnInfo
+	var cols []*dbutil.ColumnInfo
 	pks := make(map[string]bool)
 	for _, colStr := range colCreates {
 		reg = regexp.MustCompile(`,\s`)
@@ -115,9 +137,9 @@ func (Sqlite) FetchColumnInfos(db *DBServ, table string) []*ColumnInfo {
 	return cols
 }
 
-func parseString(colStr string, pks map[string]bool) (*ColumnInfo, error) {
+func parseString(colStr string, pks map[string]bool) (*dbutil.ColumnInfo, error) {
 	fields := splitColStr(colStr)
-	col := &ColumnInfo{Nullable: true}
+	col := &dbutil.ColumnInfo{Nullable: true}
 	for idx, field := range fields {
 		if idx == 0 {
 			col.Name = strings.Trim(strings.TrimSpace(field), "`[]'\"")

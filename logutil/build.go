@@ -39,9 +39,11 @@ func NewLoggerURL(file string) *zap.SugaredLogger {
 		level = u.Query().Get("level")
 	}
 	if strings.Contains(file, "{{FILE}}") {
-		return NewLoggerCustom(SingleFileConfig(level, ""), file)
+		cfg := MinLevelConfig(level)
+		return NewLoggerCustom(cfg, file)
 	}
-	return NewLoggerCustom(SingleFileConfig(level, file), "")
+	cfg := SingleFileConfig(level, file)
+	return NewLoggerCustom(cfg, "")
 }
 
 // NewLoggerCustom 根据配置产生记录器
@@ -71,12 +73,18 @@ func DefaultConfig() *LogConfig {
 	}
 }
 
-// SingleFileConfig 使用单个文件的记录器
-func SingleFileConfig(level, file string) *LogConfig {
+// MinLevelConfig 使用最低日志级别的记录器
+func MinLevelConfig(level string) *LogConfig {
 	cfg := DefaultConfig()
 	if level != "" {
 		cfg.MinLevel = level
 	}
+	return cfg
+}
+
+// SingleFileConfig 使用单个文件的记录器
+func SingleFileConfig(level, file string) *LogConfig {
+	cfg := MinLevelConfig(level)
 	cfg.Outputs = []Output{
 		{Start: level, Stop: "fatal", OutPaths: []string{file}},
 	}

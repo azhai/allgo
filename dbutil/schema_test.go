@@ -16,7 +16,6 @@ import (
 var (
 	env    *config.Environ
 	dbServ *dbutil.DBServ
-	dia    dbutil.Dialect
 )
 
 func init() {
@@ -26,7 +25,6 @@ func init() {
 	if err := newDB(dsn, dbType, logFile); err != nil {
 		panic(err)
 	}
-	dia = dbutil.CreateDialectByName(dbServ.Type)
 }
 
 func newDB(dsn, dbType, logFile string) error {
@@ -51,6 +49,7 @@ func newDB(dsn, dbType, logFile string) error {
 
 // go test -run=Columns
 func Test11_Columns(t *testing.T) {
+	dia := dbServ.LoadDialect()
 	infos := dia.FindTableInfos(dbServ)
 	for _, info := range infos {
 		fmt.Println(info.Name, info.Comment.V)
