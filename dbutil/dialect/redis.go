@@ -1,8 +1,8 @@
 package dialect
 
 import (
+	"database/sql"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/azhai/allgo/dbutil"
@@ -18,10 +18,10 @@ func init() {
 // Redis Redis缓存
 // Redis URI https://www.iana.org/assignments/uri-schemes/prov/redis
 type Redis struct {
-	Host     string     `json:"host"`
-	Port     uint16     `json:"port,omitempty"`
-	Database int        `json:"database,omitempty"`
-	Options  url.Values `json:"options,omitempty"`
+	Host           string `json:"host"`
+	Port           uint16 `json:"port,omitempty"`
+	Database       int    `json:"database,omitempty"`
+	dbutil.Options `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -47,7 +47,7 @@ func (Redis) QuoteIdent(ident string) string {
 // GetParamString 获得连接参数
 func (d Redis) GetParamString() string {
 	opts := ""
-	if d.Options == nil {
+	if d.Options.MakeSize(0) == 0 {
 		return opts
 	}
 	return d.Options.Encode()
@@ -74,16 +74,16 @@ func (d Redis) BuildFullDSN(username, password string) string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Redis) GetCurrentDB(db *dbutil.DBServ) string {
+func (Redis) GetCurrentDB(db *sql.DB) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (Redis) FindTableInfos(db *dbutil.DBServ) []*dbutil.TableSchema {
+func (Redis) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
 	return nil
 }
 
 // FetchColumnInfos 查找字段信息
-func (Redis) FetchColumnInfos(db *dbutil.DBServ, table string) []*dbutil.ColumnInfo {
+func (Redis) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
 	return nil
 }

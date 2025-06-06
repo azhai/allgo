@@ -1,8 +1,8 @@
 package dialect
 
 import (
+	"database/sql"
 	"fmt"
-	"net/url"
 	"strings"
 
 	"github.com/azhai/allgo/dbutil"
@@ -17,11 +17,11 @@ func init() {
 
 // Postgres PostgreSQL数据库
 type Postgres struct {
-	Host     string     `json:"host"`
-	Port     uint16     `json:"port,omitempty"`
-	Database string     `json:"database,omitempty"`
-	Sslmode  string     `json:"sslmode,omitempty"` // 例如 disable
-	Options  url.Values `json:"options,omitempty"`
+	Host           string `json:"host"`
+	Port           uint16 `json:"port,omitempty"`
+	Database       string `json:"database,omitempty"`
+	Sslmode        string `json:"sslmode,omitempty"` // 例如 disable
+	dbutil.Options `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -46,9 +46,7 @@ func (Postgres) QuoteIdent(ident string) string {
 
 // GetParamString 获得连接参数
 func (d Postgres) GetParamString() string {
-	if d.Options == nil {
-		d.Options = make(url.Values)
-	}
+	d.Options.MakeSize(0)
 	if mode := d.Sslmode; mode != "" {
 		d.Options.Set("sslmode", mode)
 	} else {
@@ -78,13 +76,14 @@ func (d Postgres) BuildFullDSN(username, password string) string {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Postgres) GetCurrentDB(db *dbutil.DBServ) string {
-	_ = db.QueryRow("SELECT CURRENT_DATABASE()").Scan(&db.Name)
-	return db.Name
+func (Postgres) GetCurrentDB(db *sql.DB) string {
+	dbname, query := "", `SELECT CURRENT_DATABASE()`
+	_ = db.QueryRow(query).Scan(&dbname)
+	return dbname
 }
 
 // FindTableInfos 查找表信息
-func (d Postgres) FindTableInfos(db *dbutil.DBServ) []*dbutil.TableSchema {
+func (d Postgres) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
 	query := `SELECT c.relname as table_name, d.description as table_comment
 FROM pg_catalog.pg_class c 
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
@@ -99,7 +98,7 @@ WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Postgres) FetchColumnInfos(db *dbutil.DBServ, table string) []*dbutil.ColumnInfo {
+func (Postgres) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
 	query := `SELECT s.column_name, s.column_default, s.is_nullable = 'YES' as is_nullable,
 s.data_type, s.udt_name as column_type, s.character_maximum_length,
 d.description as column_comment, p.contype as column_key, p.conname as extra

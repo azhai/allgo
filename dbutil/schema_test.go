@@ -1,13 +1,14 @@
 package dbutil_test
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"testing"
 
 	"github.com/azhai/allgo/config"
 	"github.com/azhai/allgo/dbutil"
+	_ "github.com/azhai/allgo/dbutil/dialect"
+	_ "github.com/codenotary/immudb/pkg/stdlib"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
@@ -28,19 +29,11 @@ func init() {
 }
 
 func newDB(dsn, dbType, logFile string) error {
-	if dbType == "" {
-		dbType = dbutil.ParseSchema(dsn)
-	}
-	db, err := sql.Open(dbType, dsn)
-	if err != nil || db == nil {
+	dbServ = dbutil.FromDialect(dsn, dbType)
+	err := dbServ.SetDB(sql.Open(dbServ.Type, dbServ.DSN))
+	if err != nil || dbServ.DB == nil {
 		return err
 	}
-	ctx := context.Background()
-	if err = db.PingContext(ctx); err != nil {
-		return err
-	}
-
-	dbServ = &dbutil.DBServ{DB: db, DSN: dsn, Type: dbType}
 	if logFile != "" {
 		dbServ.WithLogger(logFile)
 	}
@@ -50,7 +43,7 @@ func newDB(dsn, dbType, logFile string) error {
 // go test -run=Columns
 func Test11_Columns(t *testing.T) {
 	dia := dbServ.LoadDialect()
-	infos := dia.FindTableInfos(dbServ)
+	infos := dia.FindTableInfos(dbServ.DB)
 	for _, info := range infos {
 		fmt.Println(info.Name, info.Comment.V)
 		for _, col := range info.Columns {

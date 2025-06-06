@@ -17,8 +17,8 @@ func init() {
 
 // Sqlite SQLite3数据库
 type Sqlite struct {
-	Path    string     `json:"path"`
-	Options url.Values `json:"options,omitempty"`
+	Path           string `json:"path"`
+	dbutil.Options `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -44,7 +44,7 @@ func (Sqlite) QuoteIdent(ident string) string {
 // GetParamString 获得连接参数
 func (d Sqlite) GetParamString() string {
 	opts := "cache=shared"
-	if d.Options == nil {
+	if d.Options.MakeSize(0) == 0 {
 		return opts
 	}
 	if !d.Options.Has("cache") {
@@ -78,15 +78,15 @@ func (d Sqlite) IsMemory() bool {
 }
 
 // GetCurrentDB 获得当前数据库名
-func (Sqlite) GetCurrentDB(db *dbutil.DBServ) string {
+func (Sqlite) GetCurrentDB(db *sql.DB) string {
 	return ""
 }
 
 // FindTableInfos 查找表信息
-func (d Sqlite) FindTableInfos(db *dbutil.DBServ) []*dbutil.TableSchema {
+func (d Sqlite) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
 	query := `SELECT tbl_name, name FROM sqlite_master WHERE type = 'table'
 AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
-	tables := dbutil.QueryTableInfos(db, query, db.Name)
+	tables := dbutil.QueryTableInfos(db, query)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -95,7 +95,7 @@ AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Sqlite) FetchColumnInfos(db *dbutil.DBServ, table string) []*dbutil.ColumnInfo {
+func (Sqlite) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
 	query := `SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?`
 	var createSQL string
 	err := db.QueryRow(query, table).Scan(&createSQL)

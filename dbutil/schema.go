@@ -27,7 +27,7 @@ type ColumnInfo struct {
 	Extra    sql.Null[string] // 自动递增等选项
 }
 
-func QueryTableInfos(db *DBServ, query string, args ...any) (tables []*TableSchema) {
+func QueryTableInfos(db *sql.DB, query string, args ...any) (tables []*TableSchema) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		return
@@ -44,7 +44,7 @@ func QueryTableInfos(db *DBServ, query string, args ...any) (tables []*TableSche
 	return
 }
 
-func QueryTableColumns(db *DBServ, query string, args ...any) (cols []*ColumnInfo) {
+func QueryTableColumns(db *sql.DB, query string, args ...any) (cols []*ColumnInfo) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
 		fmt.Println("QUERY ERROR:", query, args)

@@ -1,12 +1,15 @@
 package db
 
 import (
-	"context"
 	"database/sql"
 
 	"github.com/azhai/allgo/config"
 	"github.com/azhai/allgo/dbutil"
+	_ "github.com/azhai/allgo/dbutil/dialect"
+	// _ "github.com/codenotary/immudb/pkg/stdlib"
+	// _ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	// _ "github.com/mattn/go-sqlite3"
 )
 
 func NewNullString(v string) sql.NullString {
@@ -28,22 +31,13 @@ func DB() *dbutil.DBServ {
 
 // OpenService 初始化服务
 func OpenService(env *config.Environ) error {
-	dsn := env.Get("DATABASE_URL")
 	dbType := env.GetStr("DATABASE_TYPE")
-	if dbType == "" {
-		dbType = dbutil.ParseSchema(dsn)
-	}
-
-	db, err := sql.Open(dbType, dsn)
-	if err != nil || db == nil {
+	dsn := env.Get("DATABASE_URL")
+	dbServ = dbutil.FromDialect(dsn, dbType)
+	err := dbServ.SetDB(sql.Open(dbServ.Type, dbServ.DSN))
+	if err != nil || dbServ.DB == nil {
 		return err
 	}
-	ctx := context.Background()
-	if err = db.PingContext(ctx); err != nil {
-		return err
-	}
-
-	dbServ = &dbutil.DBServ{DB: db, DSN: dsn, Type: dbType}
 	if logFile := env.Get("DATABASE_LOG"); logFile != "" {
 		dbServ.WithLogger(logFile)
 	}

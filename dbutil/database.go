@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"reflect"
 	"regexp"
 	"slices"
@@ -23,82 +24,123 @@ type DBServ struct {
 	*sql.DB
 }
 
+// FromDSN 创建一个不带sql.DB的对象
+func FromDSN(dsn, dbType string) *DBServ {
+	if dbType == "" {
+		dbType = ParseScheme(dsn)
+	}
+	return &DBServ{DSN: dsn, Type: dbType}
+}
+
+// FromDialect 创建一个不带sql.DB的对象，使用dialect补充连接参数
+func FromDialect(dsn, dbType string) *DBServ {
+	u, err := url.Parse(dsn)
+	if err != nil || u == nil {
+		panic(err)
+	}
+	if dbType == "" {
+		dbType = u.Scheme
+	}
+
+	obj := &DBServ{DSN: dsn, Type: dbType}
+	if dia := obj.LoadDialect(); dia != nil {
+		_ = dia.ParseUrlQuery(u.RawQuery)
+		size := len(obj.DSN) - len(u.RawQuery)
+		head := strings.TrimRight(obj.DSN[:size], "?& ")
+		obj.DSN = head + "?" + dia.GetParamString()
+	}
+	return obj
+}
+
+// LoadDialect 加载数据库类型
+// 需要在执行的文件开头注册已知的dialect
+// import _ "github.com/azhai/allgo/dbutil/dialect"
+func (s *DBServ) LoadDialect() Dialect {
+	if s.Dialect != nil {
+		s.Type = s.Dialect.TypeName()
+		return s.Dialect
+	}
+	if dia, ok := dialects[s.Type]; ok {
+		s.Dialect, s.Type = dia, dia.TypeName()
+		return s.Dialect
+	}
+	panic(fmt.Errorf("unsupported database type: %s", s.Type))
+}
+
+// SetDB 替换数据库对象
+func (s *DBServ) SetDB(db *sql.DB, err error) error {
+	if err != nil || db == nil {
+		return err
+	}
+	s.DB = db
+	ctx := context.Background()
+	return s.PingContext(ctx)
+}
+
+// WithLogger 记录SQL到日志
 func (s *DBServ) WithLogger(filename string) {
 	logger := logutil.NewLoggerURL(filename)
 	loggerAdapter := zapadapter.New(logger.Desugar())
 	s.DB = sqldblogger.OpenDriver(s.DSN, s.DB.Driver(), loggerAdapter)
 }
 
-func (s *DBServ) LoadDialect() Dialect {
-	if s.Dialect != nil {
-		return s.Dialect
-	}
-	if s.Type == "" && s.DSN != "" {
-		s.Type = ParseSchema(s.DSN)
-	}
-	if dia, ok := dialects[s.Type]; ok {
-		s.Dialect = dia
-		s.Type = dia.TypeName()
-		return s.Dialect
-	}
-	panic(fmt.Errorf("unsupported database type: %s", s.Type))
-}
-
-func (s *DBServ) IsPostgres() bool {
-	return s.Type == "pgsql" || s.Type == "postgres" || s.Type == "postgresql"
+// IsCompatPgsql 是否兼容PostgreSQL数据库
+// 兼容PostgreSQL数据库的查询语句中，参数用$1、$2等占位符
+func (s *DBServ) IsCompatPgsql() bool {
+	return s.Type == "pgsql" || s.Type == "postgres" || s.Type == "postgresql" || s.Type == "immudb"
 }
 
 func (s *DBServ) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.ExecContext(ctx, query, args...)
 }
 
 func (s *DBServ) Exec(query string, args ...any) (sql.Result, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Exec(query, args...)
 }
 
 func (s *DBServ) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.PrepareContext(ctx, query)
 }
 
 func (s *DBServ) Prepare(query string) (*sql.Stmt, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Prepare(query)
 }
 
 func (s *DBServ) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryContext(ctx, query, args...)
 }
 
 func (s *DBServ) Query(query string, args ...any) (*sql.Rows, error) {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Query(query, args...)
 }
 
 func (s *DBServ) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryRowContext(ctx, query, args...)
 }
 
 func (s *DBServ) QueryRow(query string, args ...any) *sql.Row {
-	if !s.IsPostgres() {
+	if !s.IsCompatPgsql() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryRow(query, args...)
