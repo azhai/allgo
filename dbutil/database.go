@@ -25,7 +25,7 @@ type DBServ struct {
 }
 
 // FromDSN 创建一个不带sql.DB的对象
-func FromDSN(dsn, dbType string) *DBServ {
+func FromDSN(dbType, dsn string) *DBServ {
 	if dbType == "" {
 		dbType = ParseScheme(dsn)
 	}
@@ -33,7 +33,7 @@ func FromDSN(dsn, dbType string) *DBServ {
 }
 
 // FromDialect 创建一个不带sql.DB的对象，使用dialect补充连接参数
-func FromDialect(dsn, dbType string) *DBServ {
+func FromDialect(dbType, dsn string) *DBServ {
 	u, err := url.Parse(dsn)
 	if err != nil || u == nil {
 		panic(err)

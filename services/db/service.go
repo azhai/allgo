@@ -5,16 +5,11 @@ import (
 
 	"github.com/azhai/allgo/config"
 	"github.com/azhai/allgo/dbutil"
-	_ "github.com/azhai/allgo/dbutil/dialect"
 	// _ "github.com/codenotary/immudb/pkg/stdlib"
 	// _ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	// _ "github.com/mattn/go-sqlite3"
 )
-
-func NewNullString(v string) sql.NullString {
-	return sql.NullString{String: v, Valid: true}
-}
 
 var dbServ *dbutil.DBServ
 
@@ -33,7 +28,7 @@ func DB() *dbutil.DBServ {
 func OpenService(env *config.Environ) error {
 	dbType := env.GetStr("DATABASE_TYPE")
 	dsn := env.Get("DATABASE_URL")
-	dbServ = dbutil.FromDialect(dsn, dbType)
+	dbServ = dbutil.FromDialect(dbType, dsn)
 	err := dbServ.SetDB(sql.Open(dbServ.Type, dbServ.DSN))
 	if err != nil || dbServ.DB == nil {
 		return err

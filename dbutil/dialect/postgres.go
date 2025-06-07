@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
 const PgsqlPort uint16 = 5432
 
-func init() {
-	dbutil.RegisterDialect(&Postgres{}, "pgsql", "postgresql")
-}
-
 // Postgres PostgreSQL数据库
 type Postgres struct {
-	Host           string `json:"host"`
-	Port           uint16 `json:"port,omitempty"`
-	Database       string `json:"database,omitempty"`
-	Sslmode        string `json:"sslmode,omitempty"` // 例如 disable
-	dbutil.Options `json:"options,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
+	Sslmode  string `json:"sslmode,omitempty"` // 例如 disable
+	Options  `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -57,9 +52,9 @@ func (d Postgres) GetParamString() string {
 
 // BuildDSN 生成DSN连接串
 func (d Postgres) BuildDSN() string {
-	addr := dbutil.DefaultHost
+	addr := DefaultHost
 	if d.Host != "" {
-		addr = dbutil.GetAddr(d.Host, d.Port)
+		addr = GetAddr(d.Host, d.Port)
 	}
 	dsn := fmt.Sprintf("postgres://%s/%s?", addr, d.Database)
 	return dsn + d.GetParamString()
@@ -69,7 +64,7 @@ func (d Postgres) BuildDSN() string {
 func (d Postgres) BuildFullDSN(username, password string) string {
 	dsn, head := d.BuildDSN(), "postgres://"
 	if strings.HasPrefix(dsn, head) {
-		account := dbutil.GetAccount(username, password)
+		account := GetAccount(username, password)
 		dsn = head + account + "@" + dsn[len(head):]
 	}
 	return dsn
@@ -83,13 +78,13 @@ func (Postgres) GetCurrentDB(db *sql.DB) string {
 }
 
 // FindTableInfos 查找表信息
-func (d Postgres) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
+func (d Postgres) FindTableInfos(db *sql.DB) []*TableSchema {
 	query := `SELECT c.relname as table_name, d.description as table_comment
 FROM pg_catalog.pg_class c 
 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 LEFT JOIN pg_catalog.pg_description d ON d.objoid = c.oid AND d.objsubid = 0
 WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname`
-	tables := dbutil.QueryTableInfos(db, query)
+	tables := QueryTableInfos(db, query)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -98,7 +93,7 @@ WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Postgres) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
+func (Postgres) FetchColumnInfos(db *sql.DB, table string) []*ColumnInfo {
 	query := `SELECT s.column_name, s.column_default, s.is_nullable = 'YES' as is_nullable,
 s.data_type, s.udt_name as column_type, s.character_maximum_length,
 d.description as column_comment, p.contype as column_key, p.conname as extra
@@ -107,5 +102,5 @@ JOIN pg_catalog.pg_class c ON c.relname=s.table_name AND c.relkind = 'r'
 LEFT JOIN pg_catalog.pg_description d ON d.objoid = c.oid AND d.objsubid = s.ordinal_position
 LEFT JOIN pg_catalog.pg_constraint p ON p.conrelid = c.oid AND s.ordinal_position = ANY (p.conkey)
 WHERE s.table_schema = 'public' AND s.table_name = $1 ORDER BY s.ordinal_position`
-	return dbutil.QueryTableColumns(db, query, table)
+	return QueryTableColumns(db, query, table)
 }

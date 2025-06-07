@@ -21,12 +21,20 @@ type ModelComment interface {
 	TableComment() string
 }
 
-type ModelChanger interface {
+type ModelPrimary interface {
 	Model
-	// UniqFields 可作为更新条件的字段与它的值
-	UniqFields() ([]string, []any)
+	// PrimaryKey 主键名
+	PrimaryKey() string
+	// GetId 返回主键值
+	GetId() int64
 	// SetId 设置主键值
 	SetId(id int64, err error) error
+}
+
+type ModelChanger interface {
+	ModelPrimary
+	// UniqFields 可作为更新条件的字段与它的值
+	UniqFields() ([]string, []any)
 	// RowValues 插入一行所需数据
 	RowValues() []any
 	// InsertSQL 插入一行的SQL语句
@@ -36,7 +44,7 @@ type ModelChanger interface {
 }
 
 func (s *DBServ) ExecUpdate(table, where string, wargs []sql.NamedArg,
-	changes map[string]any) (int, error) {
+		changes map[string]any) (int, error) {
 	var nargs []sql.NamedArg
 	query := "UPDATE " + table + " SET "
 	for k, v := range changes {

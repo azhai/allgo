@@ -7,7 +7,6 @@ import (
 
 	"github.com/azhai/allgo/config"
 	"github.com/azhai/allgo/dbutil"
-	_ "github.com/azhai/allgo/dbutil/dialect"
 	_ "github.com/codenotary/immudb/pkg/stdlib"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -21,15 +20,15 @@ var (
 
 func init() {
 	env = config.NewWithFile("../.env.testing")
-	dsn, dbType := env.Get("DATABASE_URL"), env.Get("DATABASE_TYPE")
+	dbType, dsn := env.Get("DATABASE_TYPE"), env.Get("DATABASE_URL")
 	logFile := env.Get("DATABASE_LOG")
-	if err := newDB(dsn, dbType, logFile); err != nil {
+	if err := newDB(dbType, dsn, logFile); err != nil {
 		panic(err)
 	}
 }
 
-func newDB(dsn, dbType, logFile string) error {
-	dbServ = dbutil.FromDialect(dsn, dbType)
+func newDB(dbType, dsn, logFile string) error {
+	dbServ = dbutil.FromDialect(dbType, dsn)
 	err := dbServ.SetDB(sql.Open(dbServ.Type, dbServ.DSN))
 	if err != nil || dbServ.DB == nil {
 		return err

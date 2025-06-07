@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
 const ImmuDBPort uint16 = 3322
 
-func init() {
-	dbutil.RegisterDialect(&ImmuDB{})
-}
-
 // ImmuDB ImmuDB数据库
 type ImmuDB struct {
-	Host           string `json:"host"`
-	Port           uint16 `json:"port,omitempty"`
-	Database       string `json:"database,omitempty"`
-	Sslmode        string `json:"sslmode,omitempty"` // 例如 disable
-	dbutil.Options `json:"options,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
+	Sslmode  string `json:"sslmode,omitempty"` // 例如 disable
+	Options  `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -57,9 +52,9 @@ func (d ImmuDB) GetParamString() string {
 
 // BuildDSN 生成DSN连接串
 func (d ImmuDB) BuildDSN() string {
-	addr := dbutil.DefaultHost
+	addr := DefaultHost
 	if d.Host != "" {
-		addr = dbutil.GetAddr(d.Host, d.Port)
+		addr = GetAddr(d.Host, d.Port)
 	}
 	dsn := fmt.Sprintf("immudb://%s/%s?", addr, d.Database)
 	return dsn + d.GetParamString()
@@ -69,7 +64,7 @@ func (d ImmuDB) BuildDSN() string {
 func (d ImmuDB) BuildFullDSN(username, password string) string {
 	dsn, head := d.BuildDSN(), "immudb://"
 	if strings.HasPrefix(dsn, head) {
-		account := dbutil.GetAccount(username, password)
+		account := GetAccount(username, password)
 		dsn = head + account + "@" + dsn[len(head):]
 	}
 	return dsn
@@ -83,9 +78,9 @@ func (ImmuDB) GetCurrentDB(db *sql.DB) string {
 }
 
 // FindTableInfos 查找表信息
-func (d ImmuDB) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
+func (d ImmuDB) FindTableInfos(db *sql.DB) []*TableSchema {
 	query := `SELECT name, NULL as comment FROM TABLES() ORDER BY name`
-	tables := dbutil.QueryTableInfos(db, query)
+	tables := QueryTableInfos(db, query)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -94,10 +89,10 @@ func (d ImmuDB) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
 }
 
 // FetchColumnInfos 查找字段信息
-func (d ImmuDB) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
+func (d ImmuDB) FetchColumnInfos(db *sql.DB, table string) []*ColumnInfo {
 	query := `SELECT name, NULL as default, nullable, type, '' as col_type,
 max_length, NULL as comment, CASE WHEN "primary" THEN 'primary'
 WHEN "unique" THEN 'unique' WHEN indexed THEN 'index' END as col_key,
 CASE WHEN "auto_increment" THEN 'auto_incre' END as extra FROM COLUMNS($1)`
-	return dbutil.QueryTableColumns(db, query, table)
+	return QueryTableColumns(db, query, table)
 }

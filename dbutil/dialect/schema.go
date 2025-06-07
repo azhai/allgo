@@ -1,32 +1,36 @@
-package dbutil
+package dialect
 
 import (
 	"database/sql"
 	"fmt"
 )
 
+// TableSchema 表结构
 type TableSchema struct {
-	TableInfo
-	Columns []*ColumnInfo // 字段列表
+	Columns   []*ColumnInfo `json:"columns"` // 字段列表
+	TableInfo `json:",inline"`
 }
 
+// TableInfo 表名与注释
 type TableInfo struct {
-	Name    string           // 表名
-	Comment sql.Null[string] // 表描述
+	Name    string           `json:"name"`    // 表名
+	Comment sql.Null[string] `json:"comment"` // 表描述
 }
 
+// ColumnInfo 字段信息
 type ColumnInfo struct {
-	Name     string           // 字段名
-	Default  sql.Null[string] // 默认值
-	Nullable bool             // 是否允许为空
-	DataType string           // 字段类型
-	ColType  string           // 字段类型
-	Length   sql.Null[int]    // 字段长度
-	Comment  sql.Null[string] // 字段描述
-	Index    sql.Null[string] // 索引类型
-	Extra    sql.Null[string] // 自动递增等选项
+	Name     string           `json:"name"`      // 字段名
+	Default  sql.Null[string] `json:"default"`   // 默认值
+	Nullable bool             `json:"nullable"`  // 是否允许为空
+	DataType string           `json:"data_type"` // 字段类型
+	ColType  string           `json:"col_type"`  // 字段类型
+	Length   sql.Null[int]    `json:"length"`    // 字段长度
+	Comment  sql.Null[string] `json:"comment"`   // 字段描述
+	Index    sql.Null[string] `json:"index"`     // 索引类型
+	Extra    sql.Null[string] `json:"extra"`     // 自动递增等选项
 }
 
+// QueryTableInfos 查询表结构
 func QueryTableInfos(db *sql.DB, query string, args ...any) (tables []*TableSchema) {
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -44,6 +48,7 @@ func QueryTableInfos(db *sql.DB, query string, args ...any) (tables []*TableSche
 	return
 }
 
+// QueryTableColumns 查询表字段信息
 func QueryTableColumns(db *sql.DB, query string, args ...any) (cols []*ColumnInfo) {
 	rows, err := db.Query(query, args...)
 	if err != nil {

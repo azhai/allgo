@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
 const RedisPort uint16 = 6379
 
-func init() {
-	dbutil.RegisterDialect(&Redis{}, "dragonfly", "garnet", "keydb", "valkey")
-}
-
 // Redis Redis缓存
 // Redis URI https://www.iana.org/assignments/uri-schemes/prov/redis
 type Redis struct {
-	Host           string `json:"host"`
-	Port           uint16 `json:"port,omitempty"`
-	Database       int    `json:"database,omitempty"`
-	dbutil.Options `json:"options,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database int    `json:"database,omitempty"`
+	Options  `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -55,9 +50,9 @@ func (d Redis) GetParamString() string {
 
 // BuildDSN 生成DSN连接串
 func (d Redis) BuildDSN() string {
-	addr := dbutil.DefaultHost
+	addr := DefaultHost
 	if d.Host != "" {
-		addr = dbutil.GetAddr(d.Host, d.Port)
+		addr = GetAddr(d.Host, d.Port)
 	}
 	dsn := fmt.Sprintf("redis://%s/%d?", addr, d.Database)
 	return dsn + d.GetParamString()
@@ -67,7 +62,7 @@ func (d Redis) BuildDSN() string {
 func (d Redis) BuildFullDSN(username, password string) string {
 	dsn, head := d.BuildDSN(), "redis://"
 	if strings.HasPrefix(dsn, head) {
-		account := dbutil.GetAccount(username, password)
+		account := GetAccount(username, password)
 		dsn = head + account + "@" + dsn[len(head):]
 	}
 	return dsn
@@ -79,11 +74,11 @@ func (Redis) GetCurrentDB(db *sql.DB) string {
 }
 
 // FindTableInfos 查找表信息
-func (Redis) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
+func (Redis) FindTableInfos(db *sql.DB) []*TableSchema {
 	return nil
 }
 
 // FetchColumnInfos 查找字段信息
-func (Redis) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
+func (Redis) FetchColumnInfos(db *sql.DB, table string) []*ColumnInfo {
 	return nil
 }

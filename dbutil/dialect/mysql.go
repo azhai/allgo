@@ -4,22 +4,17 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
 const MysqlPort uint16 = 3306
 
-func init() {
-	dbutil.RegisterDialect(&Mysql{}, "mariadb")
-}
-
 // Mysql MySQL或MariaDB数据库
 type Mysql struct {
-	Host           string `json:"host"`
-	Port           uint16 `json:"port,omitempty"`
-	Database       string `json:"database,omitempty"`
-	dbutil.Options `json:"options,omitempty"`
+	Host     string `json:"host"`
+	Port     uint16 `json:"port,omitempty"`
+	Database string `json:"database,omitempty"`
+	Options  `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -59,9 +54,9 @@ func (d Mysql) GetParamString() string {
 
 // BuildDSN 生成DSN连接串
 func (d Mysql) BuildDSN() string {
-	addr := dbutil.DefaultHost
+	addr := DefaultHost
 	if d.Host != "" {
-		addr = dbutil.GetAddr(d.Host, d.Port)
+		addr = GetAddr(d.Host, d.Port)
 	}
 	dsn := fmt.Sprintf("tcp(%s)/%s?", addr, d.Database)
 	return dsn + d.GetParamString()
@@ -71,7 +66,7 @@ func (d Mysql) BuildDSN() string {
 func (d Mysql) BuildFullDSN(username, password string) string {
 	dsn := d.BuildDSN()
 	if dsn != "" {
-		account := dbutil.GetAccount(username, password)
+		account := GetAccount(username, password)
 		dsn = account + "@" + dsn
 	}
 	return dsn
@@ -93,11 +88,11 @@ func (d Mysql) getDbName(db *sql.DB) string {
 }
 
 // FindTableInfos 查找表信息
-func (d Mysql) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
+func (d Mysql) FindTableInfos(db *sql.DB) []*TableSchema {
 	query := `SELECT table_name, table_comment
 FROM information_schema.tables WHERE table_schema = ?
 AND table_type = 'BASE TABLE' ORDER BY table_name`
-	tables := dbutil.QueryTableInfos(db, query, d.getDbName(db))
+	tables := QueryTableInfos(db, query, d.getDbName(db))
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -106,10 +101,10 @@ AND table_type = 'BASE TABLE' ORDER BY table_name`
 }
 
 // FetchColumnInfos 查找字段信息
-func (d Mysql) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
+func (d Mysql) FetchColumnInfos(db *sql.DB, table string) []*ColumnInfo {
 	query := `SELECT column_name, column_default, is_nullable = 'YES' as is_nullable,
 data_type, column_type, character_maximum_length, column_comment, column_key, extra
 FROM information_schema.columns WHERE table_name = ? AND table_schema = ?
 ORDER BY ordinal_position`
-	return dbutil.QueryTableColumns(db, query, table, d.getDbName(db))
+	return QueryTableColumns(db, query, table, d.getDbName(db))
 }

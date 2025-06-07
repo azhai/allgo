@@ -7,18 +7,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/azhai/allgo/dbutil"
 	"github.com/azhai/allgo/match"
 )
 
-func init() {
-	dbutil.RegisterDialect(&Sqlite{}, "sqlite", "limbo")
-}
-
 // Sqlite SQLite3数据库
 type Sqlite struct {
-	Path           string `json:"path"`
-	dbutil.Options `json:"options,omitempty"`
+	Path    string `json:"path"`
+	Options `json:"options,omitempty"`
 }
 
 // IsRelationalDB 是否关系数据库
@@ -43,6 +38,7 @@ func (Sqlite) QuoteIdent(ident string) string {
 
 // GetParamString 获得连接参数
 func (d Sqlite) GetParamString() string {
+	// opts := "cache=shared&mode=rwc&_journal_mode=WAL&_synchronous=NORMAL"
 	opts := "cache=shared"
 	if d.Options.MakeSize(0) == 0 {
 		return opts
@@ -83,10 +79,10 @@ func (Sqlite) GetCurrentDB(db *sql.DB) string {
 }
 
 // FindTableInfos 查找表信息
-func (d Sqlite) FindTableInfos(db *sql.DB) []*dbutil.TableSchema {
+func (d Sqlite) FindTableInfos(db *sql.DB) []*TableSchema {
 	query := `SELECT tbl_name, name FROM sqlite_master WHERE type = 'table'
 AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
-	tables := dbutil.QueryTableInfos(db, query)
+	tables := QueryTableInfos(db, query)
 	for i, table := range tables {
 		table.Columns = d.FetchColumnInfos(db, table.Name)
 		tables[i] = table
@@ -95,7 +91,7 @@ AND tbl_name NOT LIKE 'sqlite_%' ORDER BY tbl_name`
 }
 
 // FetchColumnInfos 查找字段信息
-func (Sqlite) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
+func (Sqlite) FetchColumnInfos(db *sql.DB, table string) []*ColumnInfo {
 	query := `SELECT sql FROM sqlite_master WHERE type = 'table' AND tbl_name = ?`
 	var createSQL string
 	err := db.QueryRow(query, table).Scan(&createSQL)
@@ -109,7 +105,7 @@ func (Sqlite) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
 	reg := regexp.MustCompile(`[^\(,\)]*(\([^\(]*\))?`)
 	colCreates := reg.FindAllString(createSQL[nStart+1:nEnd], -1)
 
-	var cols []*dbutil.ColumnInfo
+	var cols []*ColumnInfo
 	pks := make(map[string]bool)
 	for _, colStr := range colCreates {
 		reg = regexp.MustCompile(`,\s`)
@@ -137,9 +133,9 @@ func (Sqlite) FetchColumnInfos(db *sql.DB, table string) []*dbutil.ColumnInfo {
 	return cols
 }
 
-func parseString(colStr string, pks map[string]bool) (*dbutil.ColumnInfo, error) {
+func parseString(colStr string, pks map[string]bool) (*ColumnInfo, error) {
 	fields := splitColStr(colStr)
-	col := &dbutil.ColumnInfo{Nullable: true}
+	col := &ColumnInfo{Nullable: true}
 	for idx, field := range fields {
 		if idx == 0 {
 			col.Name = strings.Trim(strings.TrimSpace(field), "`[]'\"")
