@@ -25,7 +25,7 @@ func init() {
 
 // Dialect 数据库类型
 type Dialect interface {
-	IsRelationalDB() bool           // 是否关系数据库
+	IsSupport(feature string) bool  // 是否支持特性
 	TypeName() string               // 类型名
 	ImporterPath() string           // 驱动支持库
 	QuoteIdent(ident string) string // 字段或表名脱敏

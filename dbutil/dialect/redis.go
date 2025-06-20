@@ -19,8 +19,8 @@ type Redis struct {
 	Options  `json:"options,omitempty"`
 }
 
-// IsRelationalDB 是否关系数据库
-func (Redis) IsRelationalDB() bool {
+// IsSupport 是否支持特性
+func (Redis) IsSupport(feature string) bool {
 	return false
 }
 

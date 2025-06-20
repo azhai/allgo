@@ -19,8 +19,8 @@ type Postgres struct {
 	Options  `json:"options,omitempty"`
 }
 
-// IsRelationalDB 是否关系数据库
-func (Postgres) IsRelationalDB() bool {
+// IsSupport 是否支持特性
+func (Postgres) IsSupport(feature string) bool {
 	return true
 }
 

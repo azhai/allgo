@@ -17,8 +17,14 @@ type Mysql struct {
 	Options  `json:"options,omitempty"`
 }
 
-// IsRelationalDB 是否关系数据库
-func (Mysql) IsRelationalDB() bool {
+// IsSupport 是否支持特性
+func (Mysql) IsSupport(feature string) bool {
+	var lacks = map[string]bool{
+		FeatDollarHolder: false,
+	}
+	if without, ok := lacks[feature]; ok {
+		return without
+	}
 	return true
 }
 

@@ -1,12 +1,12 @@
 module github.com/azhai/allgo
 
-go 1.24
+go 1.25
 
 require (
 	github.com/alexflint/go-arg v1.5.1
 	github.com/codenotary/immudb v1.9.7
 	github.com/go-playground/form/v4 v4.2.1
-	github.com/go-sql-driver/mysql v1.9.2
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/gobwas/glob v0.2.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/lib/pq v1.10.9
@@ -30,7 +30,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect

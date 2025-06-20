@@ -7,7 +7,14 @@ import (
 	"strings"
 )
 
-const DefaultHost = "127.0.0.1"
+const (
+	DefaultHost = "127.0.0.1"
+
+	FeatRelation     = "relation"
+	FeatForeignKey   = "foreign_key"
+	FeatDollarHolder = "dollar_holder"
+	FeatBatchInsert  = "batch_insert"
+)
 
 // Options 连接参数
 type Options struct {

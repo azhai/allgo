@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/azhai/allgo/dbutil/dialect"
 )
 
 var NotPtrList = errors.New("dest must be a pointer to a slice")
@@ -13,26 +15,21 @@ var NotPtrList = errors.New("dest must be a pointer to a slice")
 type Model interface {
 	// TableName 返回表名
 	TableName() string
-}
-
-type ModelComment interface {
-	Model
 	// TableComment 返回表备注
 	TableComment() string
 }
 
 type ModelPrimary interface {
-	Model
 	// PrimaryKey 主键名
 	PrimaryKey() string
 	// GetId 返回主键值
 	GetId() int64
 	// SetId 设置主键值
 	SetId(id int64, err error) error
+	Model
 }
 
 type ModelChanger interface {
-	ModelPrimary
 	// UniqFields 可作为更新条件的字段与它的值
 	UniqFields() ([]string, []any)
 	// RowValues 插入一行所需数据
@@ -41,6 +38,7 @@ type ModelChanger interface {
 	InsertSQL() string
 	// UpsertSQL 插入或更新一行的SQL语句
 	UpsertSQL() string
+	ModelPrimary
 }
 
 func (s *DBServ) ExecUpdate(table, where string, wargs []sql.NamedArg,
@@ -125,16 +123,19 @@ func (s *DBServ) InsertRow(row ModelChanger) (bool, error) {
 	return err == nil, err
 }
 
-func InsertBatch[T ModelChanger](db *DBServ, rows []T) (int, error) {
+func InsertBatch[T ModelChanger](db *DBServ, rows []T) (num int, err error) {
 	if len(rows) == 0 {
-		return 0, nil
+		return
 	}
+	var stmt *sql.Stmt
 	query := rows[0].InsertSQL()
-	stmt, err := db.Prepare(query)
-	if err != nil {
-		return 0, err
+	if db.LoadDialect().IsSupport(dialect.FeatBatchInsert) {
+		if stmt, err = db.Prepare(query); err != nil {
+			return
+		}
 	}
-	num, withId := 0, strings.Contains(query, " RETURNING ")
+
+	withId := strings.Contains(query, " RETURNING ")
 	for _, row := range rows {
 		if !withId {
 			_, err = db.execInsert(row, stmt, query)
@@ -146,8 +147,10 @@ func InsertBatch[T ModelChanger](db *DBServ, rows []T) (int, error) {
 		}
 		num++
 	}
-	err = stmt.Close()
-	return num, err
+	if stmt != nil {
+		err = stmt.Close()
+	}
+	return
 }
 
 // ScanSource 扫描源，即sql.Rows或sql.Row
@@ -165,16 +168,16 @@ type ModelLoader interface {
 
 // ModelForeignLoader 外键扫描Model
 type ModelForeignLoader interface {
-	ModelLoader
 	// ForeignIndex 返回外键的值
 	ForeignIndex() any
+	ModelLoader
 }
 
 // ModelSecondaryLoader 外键扫描Model
 type ModelSecondaryLoader interface {
-	ModelForeignLoader
 	// SecondaryKey 返回次要字段的值
 	SecondaryKey() string
+	ModelForeignLoader
 }
 
 // ScanToList 扫描结果集到列表

@@ -29,24 +29,6 @@ func (*WallDaily) TableComment() string {
 	return "每日壁纸"
 }
 
-// ForeignIndex WallDaily的外键的值
-func (m *WallDaily) ForeignIndex() any {
-	return m.BingDate.Format("2006-01-02")
-}
-
-// ScanFrom 从src中读取数据写入当前对象
-func (m *WallDaily) ScanFrom(src dbutil.ScanSource, err error) error {
-	if err == nil {
-		err = src.Scan(&m.Id, &m.Guid, &m.BingDate,
-			&m.BingSku, &m.Title, &m.Headline, &m.Color, &m.MaxDpi)
-	}
-	return err
-}
-
-func (m *WallDaily) UniqFields() ([]string, []any) {
-	return []string{"bing_date"}, []any{m.BingDate.Format("2006-01-02")}
-}
-
 func (*WallDaily) PrimaryKey() string {
 	return "id"
 }
@@ -57,6 +39,24 @@ func (m *WallDaily) GetId() int64 {
 
 func (m *WallDaily) SetId(int64, error) error {
 	return nil
+}
+
+// ForeignIndex WallDaily的外键的值
+func (m *WallDaily) ForeignIndex() any {
+	return m.BingDate.Format("2006-01-02")
+}
+
+func (m *WallDaily) UniqFields() ([]string, []any) {
+	return []string{"bing_date"}, []any{m.BingDate.Format("2006-01-02")}
+}
+
+// ScanFrom 从src中读取数据写入当前对象
+func (m *WallDaily) ScanFrom(src dbutil.ScanSource, err error) error {
+	if err == nil {
+		err = src.Scan(&m.Id, &m.Guid, &m.BingDate,
+			&m.BingSku, &m.Title, &m.Headline, &m.Color, &m.MaxDpi)
+	}
+	return err
 }
 
 func (m *WallDaily) InsertSQL() string {

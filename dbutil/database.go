@@ -11,16 +11,18 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/azhai/allgo/dbutil/dialect"
 	"github.com/azhai/allgo/logutil"
 	"github.com/simukti/sqldb-logger"
 	"github.com/simukti/sqldb-logger/logadapter/zapadapter"
 )
 
 type DBServ struct {
-	DSN     string
-	Name    string // 当前数据库
-	Type    string // 数据库类型
-	Dialect Dialect
+	DSN          string
+	Name         string // 当前数据库
+	Type         string // 数据库类型
+	dollarHolder bool
+	Dialect      Dialect
 	*sql.DB
 }
 
@@ -57,7 +59,6 @@ func FromDialect(dbType, dsn string) *DBServ {
 // import _ "github.com/azhai/allgo/dbutil/dialect"
 func (s *DBServ) LoadDialect() Dialect {
 	if s.Dialect != nil {
-		s.Type = s.Dialect.TypeName()
 		return s.Dialect
 	}
 	if dia, ok := dialects[s.Type]; ok {
@@ -84,63 +85,66 @@ func (s *DBServ) WithLogger(filename string) {
 	s.DB = sqldblogger.OpenDriver(s.DSN, s.DB.Driver(), loggerAdapter)
 }
 
-// IsCompatPgsql 是否兼容PostgreSQL数据库
-// 兼容PostgreSQL数据库的查询语句中，参数用$1、$2等占位符
-func (s *DBServ) IsCompatPgsql() bool {
-	return s.Type == "pgsql" || s.Type == "postgres" || s.Type == "postgresql" || s.Type == "immudb"
+// AllowDollarHolder SQL中是否可用$1、$2等占位符
+func (s *DBServ) AllowDollarHolder() bool {
+	if s.Dialect == nil {
+		dia := s.LoadDialect()
+		s.dollarHolder = dia.IsSupport(dialect.FeatDollarHolder)
+	}
+	return s.dollarHolder
 }
 
 func (s *DBServ) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.ExecContext(ctx, query, args...)
 }
 
 func (s *DBServ) Exec(query string, args ...any) (sql.Result, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Exec(query, args...)
 }
 
 func (s *DBServ) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.PrepareContext(ctx, query)
 }
 
 func (s *DBServ) Prepare(query string) (*sql.Stmt, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Prepare(query)
 }
 
 func (s *DBServ) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryContext(ctx, query, args...)
 }
 
 func (s *DBServ) Query(query string, args ...any) (*sql.Rows, error) {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.Query(query, args...)
 }
 
 func (s *DBServ) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryRowContext(ctx, query, args...)
 }
 
 func (s *DBServ) QueryRow(query string, args ...any) *sql.Row {
-	if !s.IsCompatPgsql() {
+	if !s.AllowDollarHolder() {
 		query = QuestionMarkHolders(query)
 	}
 	return s.DB.QueryRow(query, args...)
