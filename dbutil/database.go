@@ -63,9 +63,14 @@ func (s *DBServ) LoadDialect() Dialect {
 	}
 	if dia, ok := dialects[s.Type]; ok {
 		s.Dialect, s.Type = dia, dia.TypeName()
+		s.initProperties()
 		return s.Dialect
 	}
 	panic(fmt.Errorf("unsupported database type: %s", s.Type))
+}
+
+func (s *DBServ) initProperties() {
+	s.dollarHolder = s.Dialect.IsSupport(dialect.FeatDollarHolder)
 }
 
 // SetDB 替换数据库对象
@@ -87,10 +92,6 @@ func (s *DBServ) WithLogger(filename string) {
 
 // AllowDollarHolder SQL中是否可用$1、$2等占位符
 func (s *DBServ) AllowDollarHolder() bool {
-	if s.Dialect == nil {
-		dia := s.LoadDialect()
-		s.dollarHolder = dia.IsSupport(dialect.FeatDollarHolder)
-	}
 	return s.dollarHolder
 }
 

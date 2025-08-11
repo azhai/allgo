@@ -1,19 +1,11 @@
-.DS_Store
-._*
-.env*
+*
 
-*.bak
-*.log
-*.lock
-*.out
-*.swap
-*.swp
-*.sublime-project
-*.sublime-workspace
+!.gitignore
+!Makefile
+!LICENSE
+!REDME.md
 
-.git/
-.idea/
-.vscode/
-bin/
-tmp/
-vendor/
+!*.go
+!go.mod
+!go.sum
+!example.env
