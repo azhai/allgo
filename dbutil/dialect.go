@@ -21,6 +21,7 @@ func init() {
 	RegisterDialect(&dialect.Postgres{}, "pgsql", "postgresql")
 	RegisterDialect(&dialect.Redis{}, "dragonfly", "garnet", "keydb", "valkey")
 	RegisterDialect(&dialect.Sqlite{}, "sqlite", "limbo", "file")
+	RegisterDialect(&dialect.Turso{})
 }
 
 // Dialect 数据库类型

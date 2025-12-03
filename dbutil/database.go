@@ -48,8 +48,10 @@ func FromDialect(dbType, dsn string) *DBServ {
 	if dia := obj.LoadDialect(); dia != nil {
 		_ = dia.ParseUrlQuery(u.RawQuery)
 		size := len(obj.DSN) - len(u.RawQuery)
-		head := strings.TrimRight(obj.DSN[:size], "?& ")
-		obj.DSN = head + "?" + dia.GetParamString()
+		obj.DSN = strings.TrimRight(obj.DSN[:size], "?& ")
+		if params := dia.GetParamString(); params != "" {
+			obj.DSN += "?" + params
+		}
 	}
 	return obj
 }
