@@ -11,9 +11,9 @@ UPXBIN   = upx
 #GOOS    = $(shell uname -s | tr [A-Z] [a-z])
 GOARCH  = $(shell uname -m | tr [A-Z] [a-z])
 ifeq ($(GOARCH), amd64)
-	GOARGS = GOAMD64=$(GOAMD64) CGO_ENABLED=1
+	GOARGS = GOEXPERIMENT=greenteagc GOAMD64=$(GOAMD64) CGO_ENABLED=1
 else
-	GOARGS = CGO_ENABLED=0
+	GOARGS = GOEXPERIMENT=greenteagc CGO_ENABLED=1
 endif
 RELEASE  = "-s -w"
 GOBUILD  = $(GOARGS) $(GOBIN) build -ldflags=$(RELEASE)
